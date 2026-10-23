@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Node.Application.Service.Wrapper — Control Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #1e293b;
+      --panel-alt: #0b1120;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --green: #22c55e;
+      --green-bg: rgba(34, 197, 94, 0.15);
+      --yellow: #eab308;
+      --yellow-bg: rgba(234, 179, 8, 0.15);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.15);
+      --gray-bg: rgba(148, 163, 184, 0.15);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.75rem;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .title-group h1 {
+      margin: 0;
+      font-size: 1.15rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+    .title-group p {
+      margin: 0.15rem 0 0;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .status-pill {
+      font-size: 0.78rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 999px;
+      background: var(--gray-bg);
+      color: var(--muted);
+    }
+    main {
+      max-width: 1400px;
+      margin: 1.5rem auto;
+      padding: 0 1.5rem;
+    }
+    .banner {
+      display: none;
+      margin-bottom: 1rem;
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .banner.error {
+      border-color: var(--red);
+      background: var(--red-bg);
+      color: #fecaca;
+    }
+    .banner.success {
+      border-color: var(--green);
+      background: var(--green-bg);
+      color: #bbf7d0;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    th {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--muted);
+      background: rgba(15, 23, 42, 0.45);
+    }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-Running { background: var(--green-bg); color: var(--green); }
+    .badge-Starting, .badge-Restarting, .badge-Stopping { background: var(--yellow-bg); color: var(--yellow); }
+    .badge-Failed { background: var(--red-bg); color: var(--red); }
+    .badge-Stopped { background: var(--gray-bg); color: var(--muted); }
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.82rem;
+    }
+    .error-cell {
+      color: #fca5a5;
+      max-width: 280px;
+      word-break: break-word;
+      font-size: 0.8rem;
+    }
+    .btn-group {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    button {
+      cursor: pointer;
+      border: 1px solid var(--border);
+      background: #334155;
+      color: var(--text);
+      padding: 0.35rem 0.7rem;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      transition: background 0.15s;
+    }
+    button:hover:not(:disabled) { background: #475569; }
+    button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    button.primary {
+      background: #0284c7;
+      border-color: #0369a1;
+    }
+    button.primary:hover:not(:disabled) { background: #0369a1; }
+    button.danger {
+      background: #991b1b;
+      border-color: #b91c1c;
+    }
+    button.danger:hover:not(:disabled) { background: #b91c1c; }
+    .output-panel {
+      display: none;
+      margin-top: 1.25rem;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.65rem 1rem;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    pre#output-content {
+      margin: 0;
+      padding: 1rem;
+      max-height: 360px;
+      overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      line-height: 1.45;
+      color: #e2e8f0;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-group">
+      <h1>Node.Application.Service.Wrapper</h1>
+      <p>Multi-Application Process Supervisor (Rust Engine)</p>
+    </div>
+    <div class="toolbar">
+      <span id="poll-status" class="status-pill">Connecting…</span>
+      <button id="reload-btn" class="primary" onclick="reloadConfig()">Reload configuration</button>
+    </div>
+  </header>
+
+  <main>
+    <div id="banner" class="banner"></div>
+
+    <div class="card">
+      <table>
+        <thead>
+          <tr>
+            <th>Application</th>
+            <th>State</th>
+            <th>PID</th>
+            <th>Uptime</th>
+            <th>Restarts</th>
+            <th>Last Exit</th>
+            <th>Last Error</th>
+            <th>Desired State</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="apps-tbody">
+          <tr><td colspan="9" style="color: var(--muted);">Loading applications…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="output-panel" class="output-panel">
+      <div class="output-header">
+        <span id="output-title">Application Output</span>
+        <button onclick="closeOutput()">Close</button>
+      </div>
+      <pre id="output-content"></pre>
+    </div>
+  </main>
+
+  <script>
+    let selectedAppForLogs = null;
+
+    function showBanner(msg, isError) {
+      const el = document.getElementById('banner');
+      el.textContent = msg;
+      el.className = 'banner ' + (isError ? 'error' : 'success');
+      el.style.display = 'block';
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    async function fetchApps() {
+      try {
+        const res = await fetch('/api/applications', { cache: 'no-store' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const apps = await res.json();
+        renderApps(apps);
+        document.getElementById('poll-status').textContent = 'Live • Updated ' + new Date().toLocaleTimeString();
+      } catch (err) {
+        document.getElementById('poll-status').textContent = 'Disconnected (' + err.message + ')';
+      }
+
+      if (selectedAppForLogs) {
+        await fetchLogs(selectedAppForLogs);
+      }
+    }
+
+    function renderApps(apps) {
+      const tbody = document.getElementById('apps-tbody');
+      if (!apps || apps.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9">No applications configured.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = apps.map(app => {
+        const name = escapeHtml(app.name);
+        const state = escapeHtml(app.state);
+        const pid = app.pid ? escapeHtml(app.pid) : '—';
+        const uptime = app.uptime ? escapeHtml(app.uptime) : '—';
+        const restarts = escapeHtml(app.restartCount);
+        const lastExit = (app.lastExitCode !== null && app.lastExitCode !== undefined)
+          ? (app.lastExitCode + (app.lastExitTime ? ' (' + new Date(app.lastExitTime).toLocaleTimeString() + ')' : ''))
+          : '—';
+        const lastErr = app.lastError ? escapeHtml(app.lastError) : '—';
+        const desiredMode = app.desiredStateSource === 'manual' ? 'manual' : 'auto';
+        const desired = escapeHtml(app.desiredState) + ' (' + desiredMode + ')';
+
+        const isActive = app.state === 'Starting' || app.state === 'Running' || app.state === 'Restarting';
+        const isStopped = app.state === 'Stopped' || app.state === 'Failed';
+        const isStopping = app.state === 'Stopping';
+
+        const disableStart = isActive || isStopping;
+        const disableStop = isStopped || isStopping;
+        const disableRestart = isStopping;
+
+        return '<tr>' +
+          '<td><strong>' + name + '</strong></td>' +
+          '<td><span class="badge badge-' + state + '">' + state + '</span></td>' +
+          '<td class="mono">' + pid + '</td>' +
+          '<td class="mono">' + uptime + '</td>' +
+          '<td class="mono">' + restarts + '</td>' +
+          '<td class="mono">' + escapeHtml(lastExit) + '</td>' +
+          '<td class="error-cell">' + lastErr + '</td>' +
+          '<td>' + desired + '</td>' +
+          '<td><div class="btn-group">' +
+            '<button ' + (disableStart ? 'disabled' : '') + ' onclick="sendAction(\'' + name + '\', \'start\')">Start</button>' +
+            '<button class="danger" ' + (disableStop ? 'disabled' : '') + ' onclick="confirmStop(\'' + name + '\')">Stop</button>' +
+            '<button ' + (disableRestart ? 'disabled' : '') + ' onclick="sendAction(\'' + name + '\', \'restart\')">Restart</button>' +
+            '<button onclick="openOutput(\'' + name + '\')">Output</button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join('');
+    }
+
+    async function sendAction(appName, action) {
+      try {
+        const res = await fetch('/api/applications/' + encodeURIComponent(appName) + '/' + action, {
+          method: 'POST',
+          headers: {
+            'X-Wrapper-Request': '1',
+            'X-Wrapper-Source': 'dashboard'
+          }
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          showBanner(body.detail || body.title || ('Action failed with HTTP ' + res.status), true);
+        } else {
+          showBanner("Accepted '" + action + "' for application '" + appName + "' (State: " + body.state + ")", false);
+        }
+        await fetchApps();
+      } catch (err) {
+        showBanner('Request failed: ' + err.message, true);
+      }
+    }
+
+    function confirmStop(appName) {
+      if (window.confirm("Stop application '" + appName + "'? It will remain stopped across restarts until started again.")) {
+        sendAction(appName, 'stop');
+      }
+    }
+
+    async function reloadConfig() {
+      try {
+        const res = await fetch('/api/configuration/reload', {
+          method: 'POST',
+          headers: {
+            'X-Wrapper-Request': '1',
+            'X-Wrapper-Source': 'dashboard'
+          }
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const errs = Array.isArray(body.errors) ? body.errors.join(' | ') : (body.detail || body.title);
+          showBanner('Configuration reload failed: ' + errs, true);
+        } else {
+          let msg = 'Configuration reloaded (' + body.summary + ')';
+          if (Array.isArray(body.requiresServiceRestart) && body.requiresServiceRestart.length > 0) {
+            msg += ' — requires service restart for: ' + body.requiresServiceRestart.join(', ');
+          }
+          showBanner(msg, false);
+        }
+        await fetchApps();
+      } catch (err) {
+        showBanner('Reload request failed: ' + err.message, true);
+      }
+    }
+
+    async function openOutput(appName) {
+      selectedAppForLogs = appName;
+      document.getElementById('output-title').textContent = 'Output — ' + appName + ' (last 200 lines)';
+      document.getElementById('output-panel').style.display = 'block';
+      await fetchLogs(appName);
+    }
+
+    function closeOutput() {
+      selectedAppForLogs = null;
+      document.getElementById('output-panel').style.display = 'none';
+    }
+
+    async function fetchLogs(appName) {
+      try {
+        const res = await fetch('/api/applications/' + encodeURIComponent(appName) + '/output?lines=200', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const pre = document.getElementById('output-content');
+        pre.textContent = (data.lines && data.lines.length > 0)
+          ? data.lines.join('\n')
+          : '(no output captured yet)';
+      } catch (_) {}
+    }
+
+    fetchApps();
+    setInterval(fetchApps, 2000);
+  </script>
+</body>
+</html>
